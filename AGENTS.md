@@ -8,10 +8,10 @@ This is a **Golang/Gin** implementation of the [RealWorld](https://github.com/go
 
 ## Technology Stack
 
-- **Go**: 1.21+ required
+- **Go**: 1.27+ required
 - **Web Framework**: [Gin](https://github.com/gin-gonic/gin) v1.10+
 - **ORM**: [GORM v2](https://gorm.io/) (gorm.io/gorm)
-- **Database**: SQLite (for development/testing)
+- **Database**: MariaDB/MySQL or SQLite (SQLite is used by tests)
 - **Authentication**: JWT using [golang-jwt/jwt/v5](https://github.com/golang-jwt/jwt)
 - **Validation**: [go-playground/validator/v10](https://github.com/go-playground/validator)
 

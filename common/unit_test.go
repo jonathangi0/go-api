@@ -10,15 +10,21 @@ import (
 	"testing"
 
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestConnectingDatabase(t *testing.T) {
+	t.Setenv("DB_DRIVER", "sqlite")
 	asserts := assert.New(t)
-	db := Init()
+	db, err := Init()
+	asserts.NoError(err, "Database should initialize")
+	if err != nil {
+		return
+	}
 	dbPath := GetDBPath()
 	// Test create & close DB
-	_, err := os.Stat(dbPath)
+	_, err = os.Stat(dbPath)
 	asserts.NoError(err, "Db should exist")
 	sqlDB, err := db.DB()
 	asserts.NoError(err, "Should get sql.DB")
@@ -32,13 +38,85 @@ func TestConnectingDatabase(t *testing.T) {
 	sqlDB.Close()
 
 	// Test DB exceptions
-	os.Chmod(dbPath, 0000)
-	db = Init()
+	if err := os.Chmod(dbPath, 0000); err != nil {
+		asserts.NoError(err, "Should make database read-only")
+		return
+	}
+	defer os.Chmod(dbPath, 0644)
+	db, initErr := Init()
+	if initErr != nil {
+		asserts.Error(initErr, "Read-only database should fail to initialize")
+		return
+	}
 	sqlDB, err = db.DB()
 	asserts.NoError(err, "Should get sql.DB")
-	asserts.Error(sqlDB.Ping(), "Db should not be able to ping")
-	sqlDB.Close()
-	os.Chmod(dbPath, 0644)
+	if err == nil {
+		asserts.Error(sqlDB.Ping(), "Db should not be able to ping")
+		sqlDB.Close()
+	}
+}
+
+func TestInitRequiresDSNForMariaDB(t *testing.T) {
+	t.Setenv("DB_DRIVER", "mariadb")
+	t.Setenv("DB_DSN", "")
+
+	db, err := Init()
+	assert.Nil(t, db)
+	assert.EqualError(t, err, `DB_DSN is required when DB_DRIVER is "mariadb"`)
+}
+
+func TestInitRejectsUnsupportedDatabaseDriver(t *testing.T) {
+	t.Setenv("DB_DRIVER", "oracle")
+
+	db, err := Init()
+	assert.Nil(t, db)
+	assert.ErrorContains(t, err, `unsupported DB_DRIVER "oracle"`)
+}
+
+func TestInitRequiresPostgresConnectionSettings(t *testing.T) {
+	t.Setenv("DB_DRIVER", "postgres")
+	t.Setenv("DATABASE_URL", "")
+	t.Setenv("DB_DSN", "")
+	t.Setenv("DB_HOST", "")
+	t.Setenv("DB_USER", "")
+	t.Setenv("DB_PASSWORD", "")
+	t.Setenv("DB_NAME", "")
+
+	db, err := Init()
+	assert.Nil(t, db)
+	assert.ErrorContains(t, err, "required when DB_DRIVER")
+}
+
+func TestPostgresConnection(t *testing.T) {
+	dsn := os.Getenv("TEST_POSTGRES_DSN")
+	if dsn == "" {
+		_ = godotenv.Load("../.env")
+		_ = godotenv.Load(".env")
+		dsn = os.Getenv("TEST_POSTGRES_DSN")
+	}
+
+	if dsn == "" && os.Getenv("DB_DRIVER") == "" {
+		t.Skip("PostgreSQL connection settings are not configured")
+	}
+
+	t.Setenv("DB_DRIVER", "postgres")
+	if dsn != "" {
+		t.Setenv("DB_DSN", dsn)
+	}
+	t.Setenv("DATABASE_URL", "")
+
+	db, err := Init()
+	assert.NoError(t, err)
+	if err != nil {
+		return
+	}
+
+	sqlDB, err := db.DB()
+	assert.NoError(t, err)
+	if err == nil {
+		assert.NoError(t, sqlDB.Ping())
+		assert.NoError(t, sqlDB.Close())
+	}
 }
 
 func TestConnectingTestDatabase(t *testing.T) {
@@ -277,6 +355,7 @@ func TestNewError(t *testing.T) {
 }
 
 func TestDatabaseDirCreation(t *testing.T) {
+	t.Setenv("DB_DRIVER", "sqlite")
 	asserts := assert.New(t)
 
 	// Test directory creation in Init
@@ -292,7 +371,11 @@ func TestDatabaseDirCreation(t *testing.T) {
 
 	// Init should create the directory
 
-	db := Init()
+	db, err := Init()
+	asserts.NoError(err, "Database should initialize")
+	if err != nil {
+		return
+	}
 
 	sqlDB, err := db.DB()
 
@@ -347,6 +430,7 @@ func TestDBInitDirCreation(t *testing.T) {
 }
 
 func TestDatabaseWithCurrentDirectory(t *testing.T) {
+	t.Setenv("DB_DRIVER", "sqlite")
 	asserts := assert.New(t)
 
 	// Test with simple filename (no directory)
@@ -356,7 +440,11 @@ func TestDatabaseWithCurrentDirectory(t *testing.T) {
 	os.Setenv("DB_PATH", "test_simple.db")
 
 	// Init should work without directory creation
-	db := Init()
+	db, err := Init()
+	asserts.NoError(err, "Database should initialize")
+	if err != nil {
+		return
+	}
 	sqlDB, err := db.DB()
 
 	asserts.NoError(err, "Should get sql.DB")

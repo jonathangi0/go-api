@@ -14,7 +14,7 @@ To enable code coverage reporting to Codecov:
    - Value: Paste your Codecov token
    - Click "Add secret"
 
-Once the secret is configured, the CI workflow will automatically upload coverage reports to Codecov after test runs on Go 1.23.
+Once the secret is configured, the CI workflow will automatically upload coverage reports to Codecov after test runs on Go 1.27.
 
 ## Note
 

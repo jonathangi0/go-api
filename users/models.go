@@ -2,6 +2,7 @@ package users
 
 import (
 	"errors"
+	"time"
 
 	"github.com/gothinkster/golang-gin-realworld-example-app/common"
 	"golang.org/x/crypto/bcrypt"
@@ -14,12 +15,30 @@ import (
 //
 // HINT: If you want to split null and "", you should use *string instead of string.
 type UserModel struct {
-	ID           uint    `gorm:"primaryKey"`
-	Username     string  `gorm:"column:username"`
-	Email        string  `gorm:"column:email;uniqueIndex"`
-	Bio          string  `gorm:"column:bio;size:1024"`
-	Image        *string `gorm:"column:image"`
-	PasswordHash string  `gorm:"column:password;not null"`
+	ID              uint       `gorm:"column:id;primaryKey;autoIncrement"`
+	UserID          *uint64    `gorm:"column:user_id"`
+	Name            string     `gorm:"column:name;size:255;not null"`
+	PayrollNumber   *string    `gorm:"column:payroll_number;size:255"`
+	AreaName        *string    `gorm:"column:area_name;size:255"`
+	Branch          *string    `gorm:"column:branch;size:255"`
+	BranchAccess    *string    `gorm:"column:branch_access"`
+	Email           string     `gorm:"column:email;size:255;uniqueIndex;not null"`
+	EmailVerifiedAt *time.Time `gorm:"column:email_verified_at"`
+	PasswordHash    string     `gorm:"column:password;not null"`
+	RememberToken   *string    `gorm:"column:remember_token;size:100"`
+	SessionID       *string    `gorm:"column:session_id"`
+	Active          bool       `gorm:"column:active;not null"`
+	CreatedAt       *time.Time `gorm:"column:created_at"`
+	UpdatedAt       *time.Time `gorm:"column:updated_at"`
+
+	// API compatibility fields; they are not columns in public.users.
+	Username string  `gorm:"-"`
+	Bio      string  `gorm:"-"`
+	Image    *string `gorm:"-"`
+}
+
+func (UserModel) TableName() string {
+	return "users"
 }
 
 // A hack way to save ManyToMany relationship,
@@ -80,6 +99,12 @@ func (u *UserModel) checkPassword(password string) error {
 func FindOneUser(condition interface{}) (UserModel, error) {
 	db := common.GetDB()
 	var model UserModel
+	if user, ok := condition.(UserModel); ok {
+		if user.Name == "" && user.Username != "" {
+			user.Name = user.Username
+		}
+		condition = user
+	}
 	err := db.Where(condition).First(&model).Error
 	return model, err
 }

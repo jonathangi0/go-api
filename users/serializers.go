@@ -29,7 +29,7 @@ func (self *ProfileSerializer) Response() ProfileResponse {
 	}
 	profile := ProfileResponse{
 		ID:        self.ID,
-		Username:  self.Username,
+		Username:  self.Name,
 		Bio:       self.Bio,
 		Image:     image,
 		Following: myUserModel.isFollowing(self.UserModel),
@@ -51,12 +51,16 @@ type UserResponse struct {
 
 func (self *UserSerializer) Response() UserResponse {
 	myUserModel := self.c.MustGet("my_user_model").(UserModel)
+	username := myUserModel.Username
+	if username == "" {
+		username = myUserModel.Name
+	}
 	image := ""
 	if myUserModel.Image != nil {
 		image = *myUserModel.Image
 	}
 	user := UserResponse{
-		Username: myUserModel.Username,
+		Username: username,
 		Email:    myUserModel.Email,
 		Bio:      myUserModel.Bio,
 		Image:    image,

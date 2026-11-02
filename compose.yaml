@@ -1,0 +1,28 @@
+services:
+  api:
+    build:
+      context: .
+      target: development
+    container_name: hmachronos-api
+    working_dir: /src
+    volumes:
+      - .:/src
+      - api-go-cache:/go/pkg/mod
+      - api-go-build-cache:/root/.cache/go-build
+    environment:
+      DB_DRIVER: postgres
+      DB_HOST: ${DB_HOST:?Define DB_HOST in the local .env file}
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:?Define DB_USER in the local .env file}
+      DB_PASSWORD: ${DB_PASSWORD:?Define DB_PASSWORD in the local .env file}
+      DB_NAME: ${DB_NAME:?Define DB_NAME in the local .env file}
+      DB_SSLMODE: ${DB_SSLMODE:-disable}
+      GIN_MODE: debug
+      PORT: "8080"
+    ports:
+      - "18080:8080"
+    restart: unless-stopped
+
+volumes:
+  api-go-cache:
+  api-go-build-cache:

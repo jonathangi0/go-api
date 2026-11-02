@@ -14,7 +14,7 @@ This codebase was created to demonstrate a fully fledged fullstack application b
 ## Recent Updates
 
 This project has been modernized with the following updates:
-- **Go 1.21+**: Updated from Go 1.15 to require Go 1.21 or higher
+- **Go 1.27+**: Updated to require Go 1.27 or higher
 - **GORM v2**: Migrated from deprecated jinzhu/gorm v1 to gorm.io/gorm v2
 - **JWT v5**: Updated from deprecated dgrijalva/jwt-go to golang-jwt/jwt/v5 (fixes CVE-2020-26160)
 - **Validator v10**: Updated validator tags and package to match gin v1.10.0
@@ -78,32 +78,52 @@ go tool cover -func=coverage.out
 
 ## Install Golang
 
-Make sure you have Go 1.21 or higher installed.
+Make sure you have Go 1.27 or higher installed.
 
 https://golang.org/doc/install
 
 ## Environment Config
 
-Environment variables can be set directly in your shell or via a `.env` file (requires a tool like `source` or `direnv`).
+Environment variables can be set directly in your shell or in a `.env` file in the project root. The application loads `.env` automatically when it starts; variables already set in the process environment take precedence.
 
 Available environment variables:
 ```bash
 PORT=8080                     # Server port (default: 8080)
 GIN_MODE=debug               # Gin mode: debug or release
-DB_PATH=./data/gorm.db       # SQLite database path (default: ./data/gorm.db)
-TEST_DB_PATH=./data/test.db  # Optional: SQLite database path used for tests
+DB_DRIVER=postgres           # sqlite, mysql, mariadb, postgres, or postgresql
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=change-me
+DB_NAME=hmachronos
+DB_SSLMODE=disable
+DB_DSN=postgres connection string (optional)
+DATABASE_URL=postgres://user:password@host:5432/database (optional)
+DB_PATH=./data/gorm.db       # SQLite path; only used when DB_DRIVER=sqlite
+TEST_DB_PATH=./data/test.db  # SQLite database path used for tests
 ```
 
 Example usage:
 ```bash
-# Option 1: Set environment variables directly
+# PostgreSQL
+export DB_DRIVER=postgres
+export DB_HOST=127.0.0.1
+export DB_PORT=5432
+export DB_USER=hmachronos
+export DB_PASSWORD='change-me'
+export DB_NAME=hmachronos
+export DB_SSLMODE=require
+go run app.go
+
+# SQLite for local development/tests
 export PORT=3000
 export DB_PATH=./data/myapp.db
-go run hello.go
-
-# Option 2: Inline with command
-PORT=3000 go run hello.go
+go run app.go
 ```
+
+For PostgreSQL, configure either `DATABASE_URL`, `DB_DSN`, or the individual
+`DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, and `DB_NAME` variables.
+`DATABASE_URL` takes precedence, followed by `DB_DSN`.
 
 See `.env.example` for a complete template.
 
@@ -119,11 +139,45 @@ go mod tidy
 ## Run the Server
 ```bash
 # Using default port 8080
-go run hello.go
+go run .
 
 # Using custom port
-PORT=3000 go run hello.go
+PORT=3000 go run .
 ```
+
+## Run with Docker
+
+Start the API against PostgreSQL using the database variables in the local
+`.env` file. Docker Compose passes these variables to the container:
+```bash
+docker compose up --build -d
+```
+
+Check that the server is responding:
+```bash
+curl http://localhost:18080/api/ping/
+```
+
+The configured database must already contain the `surgical_notes` table; the
+application does not create or migrate it automatically. Stop the container
+with `docker compose down`.
+
+## Surgical Notes API
+
+The surgical notes endpoints use the existing `surgical_notes` table and do not
+create or migrate it at startup. They require a valid authenticated user token
+in the `Authorization: Token <token>` header.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/surgical-notes` | List notes (`limit` and `offset` supported) |
+| `GET` | `/api/surgical-notes/:id` | Retrieve a note |
+| `POST` | `/api/surgical-notes` | Create a note |
+| `PUT` | `/api/surgical-notes/:id` | Replace a note's editable fields |
+| `DELETE` | `/api/surgical-notes/:id` | Soft-delete a note |
+
+Request and response fields use the `surgical_notes` column names in
+`snake_case`, such as `patient_name` and `surgery_datetime`.
 
 ## Testing
 From the project root, run:

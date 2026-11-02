@@ -29,6 +29,7 @@ func (self *UserModelValidator) Bind(c *gin.Context) error {
 		return err
 	}
 	self.userModel.Username = self.User.Username
+	self.userModel.Name = self.User.Username
 	self.userModel.Email = self.User.Email
 	self.userModel.Bio = self.User.Bio
 
@@ -49,7 +50,11 @@ func NewUserModelValidator() UserModelValidator {
 
 func NewUserModelValidatorFillWith(userModel UserModel) UserModelValidator {
 	userModelValidator := NewUserModelValidator()
-	userModelValidator.User.Username = userModel.Username
+	if userModel.Username != "" {
+		userModelValidator.User.Username = userModel.Username
+	} else {
+		userModelValidator.User.Username = userModel.Name
+	}
 	userModelValidator.User.Email = userModel.Email
 	userModelValidator.User.Bio = userModel.Bio
 	userModelValidator.User.Password = common.RandomPassword

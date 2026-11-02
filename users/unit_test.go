@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -88,6 +90,38 @@ func TestUserModel(t *testing.T) {
 	asserts.Equal(1, len(a.GetFollowings()), "GetFollowings should be right after a unFollowing b")
 	asserts.EqualValues(c, a.GetFollowings()[0], "GetFollowings should be right after a unFollowing b")
 	asserts.Equal(false, a.isFollowing(b), "isFollowing should be right after a unFollowing b")
+}
+
+func TestUserModelPublicUsersSchema(t *testing.T) {
+	assert.Equal(t, "users", UserModel{}.TableName())
+
+	expectedColumns := map[string]string{
+		"ID":              "id",
+		"UserID":          "user_id",
+		"Name":            "name",
+		"PayrollNumber":   "payroll_number",
+		"AreaName":        "area_name",
+		"Branch":          "branch",
+		"BranchAccess":    "branch_access",
+		"Email":           "email",
+		"EmailVerifiedAt": "email_verified_at",
+		"PasswordHash":    "password",
+		"RememberToken":   "remember_token",
+		"SessionID":       "session_id",
+		"Active":          "active",
+		"CreatedAt":       "created_at",
+		"UpdatedAt":       "updated_at",
+	}
+
+	modelType := reflect.TypeOf(UserModel{})
+	for fieldName, columnName := range expectedColumns {
+		field, ok := modelType.FieldByName(fieldName)
+		if !assert.True(t, ok, "missing model field %s", fieldName) {
+			continue
+		}
+		assert.True(t, strings.Contains(field.Tag.Get("gorm"), "column:"+columnName),
+			"field %s must map to column %s", fieldName, columnName)
+	}
 }
 
 // Reset test DB and create new one with mock data
